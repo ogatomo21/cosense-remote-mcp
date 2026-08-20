@@ -99,6 +99,7 @@ Managed OAuth利用時のOAuth discovery情報はAccess層からクライアン�
 - `COSENSE_SID`はSecret bindingとして扱い、JSONレスポンスやログに含めません。
 - `/mcp`はAccess assertionがない、または無効な要求を`401`で拒否します。
 - Access JWTは`https://<team-domain>/cdn-cgi/access/certs`で署名を検証し、issuerとAUDも検証します。
+- `/mcp`のOriginは全許可です。Remote MCPクライアントとの互換性を優先しており、アクセス制御はCloudflare AccessのOAuthトークンとWorker内のJWT検証で行います。
 - MCPツールのスキーマは未定義の入力を拒否するため、呼び出し側からプロジェクトや認証情報を上書きできません。
 - Cosense側の任意のエラー内容をそのまま返さず、操作単位のエラーへ限定します。
 - 意図せず巨大なレスポンスを返さないよう、ツール出力は100,000文字で上限を設けています。

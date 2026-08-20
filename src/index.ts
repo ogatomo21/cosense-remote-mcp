@@ -25,7 +25,15 @@ app.all("/mcp", (context) => {
     projectName: config.projectName,
     sid: config.cosenseSid,
   });
-  const handler = createMcpHandler(() => createCosenseServer(client));
+  const handler = createMcpHandler(
+    () => createCosenseServer(client),
+    {
+      // Cloudflare Access authenticates every request before it reaches this
+      // handler. Accept all client Origins so Remote MCP clients, including
+      // ChatGPT, are not rejected by the SDK's restrictive default allowlist.
+      allowedOriginHostnames: "*",
+    },
+  );
   // Agents SDK v2 exposes an extended ExecutionContext while Hono is typed
   // against the Worker global. At runtime this is the same Worker context.
   return handler(context.req.raw, context.env, context.executionCtx as Parameters<typeof handler>[2]);

@@ -3,3 +3,4 @@ node_modules/
 .dev.vars
 coverage/
 src/worker-configuration.d.ts
+.codex-remote-attachments/
