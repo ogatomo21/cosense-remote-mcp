@@ -16,6 +16,10 @@ function pageDescriptions(pages: CosenseRelatedPage[] | undefined): string {
   }).join("\n");
 }
 
+function formatUnixSeconds(timestamp: number): string {
+  return new Date(timestamp * 1_000).toISOString();
+}
+
 export function formatPage(page: CosensePage): string {
   const body = page.lines.map((line) => line.text).join("\n");
   const directLinks = page.links?.length ? page.links.map((link) => `- ${link}`).join("\n") : "(none)";
@@ -46,7 +50,7 @@ export function formatPageList(pages: CosensePageSummary[]): string {
   if (pages.length === 0) return "No pages found.";
   return truncate(pages.map((page) => {
     const description = page.descriptions?.filter(Boolean).join(" ");
-    const updated = page.updated ? `; updated: ${new Date(page.updated).toISOString()}` : "";
+    const updated = page.updated !== undefined ? `; updated: ${formatUnixSeconds(page.updated)}` : "";
     return `- ${page.title}${description ? ` — ${description}` : ""}${updated}`;
   }).join("\n"));
 }

@@ -4,6 +4,12 @@ Cosense（旧Scrapbox）の単一プロジェクトを操作する、stateless�
 
 1つのWorkerは、1つのCosenseプロジェクトと1つの`connect.sid`に固定されます。MCPツールの引数から、別プロジェクトや認証情報を指定・変更することはできません。
 
+## 各種MCPツールから使う方法
+
+- 名前 Cosense
+- MCPエンドポイント `https://<worker-host>/mcp`
+- 認証 OAuth
+
 ## Cloudflareへワンクリックデプロイ
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ogatomo21/cosense-remote-mcp)

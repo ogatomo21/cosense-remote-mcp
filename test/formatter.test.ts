@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatPage } from "../src/cosense/formatter";
+import { formatPage, formatPageList } from "../src/cosense/formatter";
 
 describe("formatPage", () => {
   it("includes page body and every requested link group", () => {
@@ -25,5 +25,13 @@ describe("formatPage", () => {
     expect(result).toContain("## External/project links");
     expect(result).toContain("Other project");
     expect(result).toContain("Foreign page (other)");
+  });
+});
+
+describe("formatPageList", () => {
+  it("interprets Cosense updated timestamps as Unix seconds", () => {
+    expect(formatPageList([{ title: "Page", updated: 1_700_000_000 }])).toContain(
+      "2023-11-14T22:13:20.000Z",
+    );
   });
 });
