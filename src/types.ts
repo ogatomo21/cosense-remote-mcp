@@ -1,6 +1,3 @@
-export interface Env {
-  COSENSE_PROJECT_NAME: string;
+export interface Env extends Cloudflare.Env {
   COSENSE_SID: string;
-  CF_ACCESS_TEAM_DOMAIN: string;
-  CF_ACCESS_AUD: string;
 }

@@ -68,12 +68,10 @@ pnpm wrangler secret put COSENSE_SID
 COSENSE_SID=your-connect.sid-value
 ```
 
-検証とローカル実行は以下のとおりです。
+検証とローカル実行は以下のとおりです。`pnpm check` はLint、型検証、ユニットテスト、Worker binding型の同期確認、デプロイ前バンドル検証をまとめて実行します。
 
 ```bash
-pnpm lint
-pnpm typecheck
-pnpm test
+pnpm check
 pnpm wrangler dev --local
 ```
 
@@ -82,7 +80,7 @@ pnpm wrangler dev --local
 デプロイする準備ができた段階でのみ、次のコマンドを実行します。
 
 ```bash
-pnpm deploy
+pnpm run deploy
 ```
 
 続いてCloudflare Zero Trustダッシュボードで、Workerのホスト名に対するAccess Applicationを作成します。

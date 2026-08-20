@@ -23,12 +23,13 @@
   },
   "scripts": {
     "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "pnpm lint && pnpm test && wrangler check",
-    "cf-types": "wrangler types ./src/worker-configuration.d.ts"
+    "cf-types": "wrangler types ./src/worker-configuration.d.ts --strict-vars=false",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm cf-types --check && wrangler deploy --dry-run"
   },
   "dependencies": {
     "@cosense/std": "npm:@jsr/cosense__std@^0.31.0",
@@ -41,8 +42,8 @@
     "zod": "^4.1.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260820.1",
     "@eslint/js": "^10.0.1",
+    "@types/node": "^26.2.0",
     "eslint": "^10.8.1",
     "typescript": "^5.9.0",
     "typescript-eslint": "^8.67.0",
