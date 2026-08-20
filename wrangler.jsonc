@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cosense-mcp-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-20",
+  "vars": {
+    "COSENSE_PROJECT_NAME": "your-project",
+    "CF_ACCESS_TEAM_DOMAIN": "https://example.cloudflareaccess.com",
+    "CF_ACCESS_AUD": "YOUR_ACCESS_AUDIENCE"
+  }
+}

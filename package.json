@@ -1,0 +1,52 @@
+{
+  "name": "cosense-mcp-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A Cloudflare Workers Remote MCP server for a single Cosense project.",
+  "type": "module",
+  "packageManager": "pnpm@10.14.0",
+  "cloudflare": {
+    "bindings": {
+      "COSENSE_PROJECT_NAME": {
+        "description": "このWorkerに固定するCosenseプロジェクト名を入力します。MCPツールの呼び出し側から変更することはできません。"
+      },
+      "CF_ACCESS_TEAM_DOMAIN": {
+        "description": "Cloudflare Zero TrustのTeam Domainを`https://<team>.cloudflareaccess.com`形式で入力します。"
+      },
+      "CF_ACCESS_AUD": {
+        "description": "Cloudflare Access ApplicationのApplication Audience（AUD）Tagを入力します。"
+      },
+      "COSENSE_SID": {
+        "description": "対象Cosenseプロジェクトへアクセスできる`connect.sid`をSecretとして入力します。値をGitや設定ファイルへ保存しないでください。"
+      }
+    }
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "pnpm lint && pnpm test && wrangler check",
+    "cf-types": "wrangler types ./src/worker-configuration.d.ts"
+  },
+  "dependencies": {
+    "@cosense/std": "npm:@jsr/cosense__std@^0.31.0",
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "@modelcontextprotocol/server": "2.0.0",
+    "agents": "^0.21.0",
+    "hono": "^4.10.0",
+    "jose": "^6.1.0",
+    "option-t": "^53.0.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260820.1",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.1",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.67.0",
+    "vitest": "^4.0.0",
+    "wrangler": "^4.38.0"
+  }
+}
