@@ -1,0 +1,220 @@
+name: Sync upstream
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "同じ upstream SHA でも同期を実行する"
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    # 毎日 03:17 JST (18:17 UTC)
+    - cron: "17 18 * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_REPO: ogatomo21/cosense-remote-mcp
+  UPSTREAM_BRANCH: main
+  SYNC_BRANCH: chore/sync-upstream
+
+jobs:
+  sync:
+    # 配布元リポジトリ自身では実行しない
+    if: github.repository != 'ogatomo21/cosense-remote-mcp'
+    runs-on: ubuntu-latest
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_BRANCH: ${{ github.event.repository.default_branch }}
+      FORCE_SYNC: ${{ github.event_name == 'workflow_dispatch' && inputs.force || false }}
+
+    steps:
+      - name: Checkout downstream repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Check for an existing sync PR
+        id: existing_pr
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          pr_number="$(
+            gh pr list \
+              --state open \
+              --head "$SYNC_BRANCH" \
+              --base "$TARGET_BRANCH" \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+
+          if [[ -n "$pr_number" ]]; then
+            echo "Sync PR #$pr_number is already open. Skipping to avoid overwriting manual fixes."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fetch upstream
+        if: steps.existing_pr.outputs.skip != 'true'
+        id: upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git remote remove upstream 2>/dev/null || true
+          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git"
+          git fetch --no-tags upstream "$UPSTREAM_BRANCH"
+
+          upstream_sha="$(git rev-parse "upstream/$UPSTREAM_BRANCH")"
+          echo "sha=$upstream_sha" >> "$GITHUB_OUTPUT"
+          echo "Upstream: $UPSTREAM_REPO@$upstream_sha"
+
+      - name: Check sync state
+        if: steps.existing_pr.outputs.skip != 'true'
+        id: state
+        shell: bash
+        env:
+          UPSTREAM_SHA: ${{ steps.upstream.outputs.sha }}
+        run: |
+          set -euo pipefail
+
+          last_sync=""
+          if [[ -f ".github/upstream-sync.sha" ]]; then
+            last_sync="$(tr -d '[:space:]' < .github/upstream-sync.sha)"
+          fi
+
+          echo "last_sync=$last_sync" >> "$GITHUB_OUTPUT"
+
+          if [[ "$FORCE_SYNC" != "true" && -n "$last_sync" && "$last_sync" == "$UPSTREAM_SHA" ]]; then
+            echo "Already synced with $UPSTREAM_SHA."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build sync branch
+        if: steps.existing_pr.outputs.skip != 'true' && steps.state.outputs.skip != 'true'
+        id: build
+        shell: bash
+        env:
+          UPSTREAM_SHA: ${{ steps.upstream.outputs.sha }}
+          LAST_SYNC: ${{ steps.state.outputs.last_sync }}
+        run: |
+          set -euo pipefail
+
+          # downstream/main を親にして同期用ブランチを作る。
+          # upstream と Git 履歴が無関係でも、tree を直接取り込むので merge は不要。
+          git switch --force-create "$SYNC_BRANCH" "origin/$TARGET_BRANCH"
+
+          # 作業ツリーと index を upstream/main の最新スナップショットに置き換える。
+          # upstream で削除されたファイルも正しく削除される。
+          git read-tree --reset -u "upstream/$UPSTREAM_BRANCH"
+
+          # Cloudflare の Deploy to Cloudflare が書き換える可能性がある
+          # 配布先固有の Wrangler 設定は downstream 側を保持する。
+          preserve_files=(
+            "wrangler.jsonc"
+            "wrangler.json"
+            "wrangler.toml"
+          )
+
+          for file in "${preserve_files[@]}"; do
+            if git cat-file -e "origin/$TARGET_BRANCH:$file" 2>/dev/null; then
+              git checkout "origin/$TARGET_BRANCH" -- "$file"
+            fi
+          done
+
+          # upstream の Wrangler 設定自体が前回同期以降に変わったかを記録する。
+          config_changed=false
+          if [[ -z "$LAST_SYNC" ]] || ! git cat-file -e "${LAST_SYNC}^{commit}" 2>/dev/null; then
+            config_changed=true
+          elif ! git diff --quiet "$LAST_SYNC" "$UPSTREAM_SHA" -- \
+            wrangler.jsonc wrangler.json wrangler.toml; then
+            config_changed=true
+          fi
+          echo "config_changed=$config_changed" >> "$GITHUB_OUTPUT"
+
+          # 次回の差分判定用。
+          mkdir -p .github
+          printf '%s\n' "$UPSTREAM_SHA" > .github/upstream-sync.sha
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No downstream changes were produced."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git commit -m "chore: sync upstream ${UPSTREAM_SHA:0:7}"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Push sync branch
+        if: steps.build.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # このブランチは Actions 専用。過去のマージ済み/閉鎖済みブランチが残っていても更新する。
+          git fetch origin "$SYNC_BRANCH" 2>/dev/null || true
+          git push --force-with-lease --set-upstream origin "$SYNC_BRANCH"
+
+      - name: Create pull request
+        if: steps.build.outputs.changed == 'true'
+        shell: bash
+        env:
+          UPSTREAM_SHA: ${{ steps.upstream.outputs.sha }}
+          LAST_SYNC: ${{ steps.state.outputs.last_sync }}
+          CONFIG_CHANGED: ${{ steps.build.outputs.config_changed }}
+        run: |
+          set -euo pipefail
+
+          body="$RUNNER_TEMP/upstream-sync-pr.md"
+
+          {
+            echo "Upstream \`${UPSTREAM_REPO}:${UPSTREAM_BRANCH}\` の更新を取り込む自動同期PRです。"
+            echo
+            echo "- Upstream commit: \`${UPSTREAM_SHA}\`"
+            echo "- 配布先固有の \`wrangler.jsonc\` / \`wrangler.json\` / \`wrangler.toml\` は自動上書きしません。"
+            echo "- このPRをマージするまで本番ブランチは変更されません。"
+            echo
+            echo "### 注意"
+            echo
+            echo "この同期は upstream の最新ソースツリーを基準にするため、配布先でソースコードを独自変更している場合は、このPRの差分を確認してください。"
+
+            if [[ "$CONFIG_CHANGED" == "true" ]]; then
+              echo
+              echo "> [!WARNING]"
+              echo "> upstream 側の Wrangler 設定が初回同期、または前回同期以降に変更されています。"
+              echo "> 配布先固有の値を守るため自動反映していないので、必要な binding / vars / compatibility 設定が追加されていないか手動で確認してください。"
+              echo
+              echo "Upstream config: https://github.com/${UPSTREAM_REPO}/blob/${UPSTREAM_BRANCH}/wrangler.jsonc"
+            fi
+
+            if [[ -n "$LAST_SYNC" ]]; then
+              echo
+              echo "Upstream diff: https://github.com/${UPSTREAM_REPO}/compare/${LAST_SYNC}...${UPSTREAM_SHA}"
+            fi
+          } > "$body"
+
+          gh pr create \
+            --base "$TARGET_BRANCH" \
+            --head "$SYNC_BRANCH" \
+            --title "chore: sync upstream" \
+            --body-file "$body"
