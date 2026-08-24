@@ -36,9 +36,11 @@
     "@modelcontextprotocol/sdk": "1.30.0",
     "@modelcontextprotocol/server": "2.0.0",
     "agents": "^0.21.0",
+    "engine.io-client": "6.6.6",
     "hono": "^4.10.0",
     "jose": "^6.1.0",
     "option-t": "^53.0.0",
+    "socket.io-client": "4.8.3",
     "zod": "^4.1.0"
   },
   "devDependencies": {

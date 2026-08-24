@@ -20,6 +20,9 @@ importers:
       agents:
         specifier: ^0.21.0
         version: 0.21.0(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260820.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(ai@6.0.259(zod@4.4.3))(react@19.2.8)(rolldown@1.2.5)(vite@8.2.2(@types/node@26.2.0)(esbuild@0.28.1)(yaml@2.9.0))(zod@4.4.3)
+      engine.io-client:
+        specifier: 6.6.6
+        version: 6.6.6
       hono:
         specifier: ^4.10.0
         version: 4.13.3
@@ -29,6 +32,9 @@ importers:
       option-t:
         specifier: ^53.0.0
         version: 53.0.0
+      socket.io-client:
+        specifier: 4.8.3
+        version: 4.8.3
       zod:
         specifier: ^4.1.0
         version: 4.4.3

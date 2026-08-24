@@ -6,6 +6,7 @@ import { isOk, unwrapErr } from "option-t/plain_result";
 
 import { insertLinesAfterMatch } from "./insert-lines";
 import type { CosenseClient, CosensePage, CosensePageSummary, CosenseSearchResult } from "./types";
+import { createCosenseSocket } from "./worker-socket";
 
 export class CosenseClientError extends Error {
   constructor(message: string) {
@@ -44,11 +45,12 @@ export class CloudflareCosenseClient implements CosenseClient {
   }
 
   async insertLines(title: string, targetLineText: string, text: string): Promise<void> {
+    const socket = createCosenseSocket(this.options.sid);
     const result = await patch(
       this.options.projectName,
       title,
       (lines) => insertLinesAfterMatch(lines, targetLineText, text),
-      { sid: this.options.sid, maxAttempts: 3 },
+      { sid: this.options.sid, socket, maxAttempts: 3 },
     );
 
     if (!isOk(result)) {

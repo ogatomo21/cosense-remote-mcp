@@ -21,8 +21,12 @@ export function registerInsertLinesTool(server: McpServer, client: CosenseClient
       try {
         await client.insertLines(title, targetLineText, text);
         return { content: [{ type: "text" as const, text: `Inserted text into “${title}”.` }] };
-      } catch {
-        return toolError("Updating the Cosense page");
+      } catch (error) {
+        console.error("insert_lines failed", {
+          name: error instanceof Error ? error.name : "UnknownError",
+          message: error instanceof Error ? error.message : "Non-error failure",
+        });
+        return toolError("Updating the Cosense page", error);
       }
     },
   );
